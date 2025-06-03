@@ -12,7 +12,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import WorkExperienceForm from '../../screens/calendar';
+import WorkExperienceForm from '../../auth/screens/calendar';
 
 export default function OnboardingForm() {
     const navigation = useNavigation<NavigationProp<any>>();

@@ -11,75 +11,120 @@ import {
 import CheckBox from '@react-native-community/checkbox';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import OnboardingForm from '../../OnboardingScreen/Main/Onboarding1';
+import { useDispatch, useSelector } from 'react-redux';
+import { validateLoginEmail, validateLoginPassword, loginUser } from '../../store/slices/registerSlice';
+import type { RootState, AppDispatch } from '../../components';
 
 type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Onboarding1: undefined;
+  ForgotPassword: undefined;
   // Add other routes here as you create them
 };
 
 const LoginScreen = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const dispatch = useDispatch<AppDispatch>();
+  
+  const validation = useSelector((state: RootState) => state.validation);
+  const { email, password, emailError, passwordError, loading, error } = validation.login;
+
+  const handleLogin = async () => {
+    if (!emailError && !passwordError) {
+      try {
+        const result = await dispatch(loginUser({ email, password })).unwrap();
+        if (result) {
+          navigation.navigate('Onboarding1');
+        }
+      } catch (err) {
+        // Error is handled by the reducer
+        console.error('Login failed:', err);
+      }
+    }
+  };
 
   return (
-    
     <View style={styles.container}>
-     <View style={styles.logoContainer} >
-     <Image source={require('../../../assets/image/logo.png')} style={styles.logo} />
-     </View>
+      <View style={styles.logoContainer}>
+        <Image source={require('../../../assets/image/logo.png')} style={styles.logo} />
+      </View>
       <Text style={styles.title}>Welcome back</Text>
       <Text style={styles.subtitle}>Welcome back! Please enter your details.</Text>
+
+      {error && <Text style={styles.errorText}>{error}</Text>}
 
       <Text style={styles.label}>Email</Text>
       <TextInput
         placeholder="Enter your email"
-        style={styles.input}
+        style={[styles.input, emailError && styles.inputError]}
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(text) => dispatch(validateLoginEmail(text))}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        editable={!loading}
       />
+      {emailError && <Text style={styles.errorText}>{emailError}</Text>}
 
       <Text style={styles.label}>Password</Text>
       <TextInput
-         placeholder='Password'
+        placeholder='Password'
         secureTextEntry
-        style={styles.input}
+        style={[styles.input, passwordError && styles.inputError]}
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(text) => dispatch(validateLoginPassword(text))}
+        editable={!loading}
       />
+      {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
 
       <View style={styles.row}>
         <CheckBox
           value={remember}
           onValueChange={setRemember}
           tintColors={{ true: '#1D4ED8', false: '#666' }}
+          disabled={loading}
         />
         <Text style={styles.remember}>Remember for 30 days</Text>
-        <TouchableOpacity style={{ marginLeft: 'auto' }}>
+        <TouchableOpacity 
+          style={{ marginLeft: 'auto' }}
+          onPress={() => navigation.navigate('ForgotPassword')}
+          disabled={loading}
+        >
           <Text style={styles.link}>Forgot password</Text>
         </TouchableOpacity>
       </View>
 
-      {/* <TouchableOpacity style={styles.loginButton}> */}
-      <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate('Onboarding1')}>
-        <Text style={styles.loginText}>Log in</Text>
-        
+      <TouchableOpacity 
+        style={[
+          styles.loginButton, 
+          (emailError || passwordError || loading) && styles.loginButtonDisabled
+        ]} 
+        onPress={handleLogin}
+        disabled={!!emailError || !!passwordError || loading}
+      >
+        <Text style={styles.loginText}>
+          {loading ? 'Logging in...' : 'Log in'}
+        </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.googleButton}>
-      <Image
-        source={require('../../../assets/image/google.png')} // Replace with your actual path
-        style={styles.googleImage}/>
+      <TouchableOpacity 
+        style={styles.googleButton}
+        disabled={loading}
+      >
+        <Image
+          source={require('../../../assets/image/google.png')}
+          style={styles.googleImage}
+        />
         <Text style={styles.googleText}>Sign up with Google</Text>
       </TouchableOpacity>
 
       <View style={styles.footer}>
         <Text>Not a member? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('Register')}
+          disabled={loading}
+        >
           <Text style={styles.link}>Register</Text>
         </TouchableOpacity>
       </View>
@@ -179,5 +224,17 @@ const styles = StyleSheet.create({
     marginTop: 24,
     flexDirection: 'row',
     justifyContent: 'center'
-  }
+  },
+  inputError: {
+    borderColor: '#FF3B30',
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 8,
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
+  },
 }); 
